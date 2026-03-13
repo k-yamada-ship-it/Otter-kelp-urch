@@ -207,15 +207,17 @@ function update(dt) {
 
   const eatRadius = state.giantTimer > 0 ? 68 : 42;
   const next = [];
+  let eatenNow = 0;
+  let clearAll = false;
 
   for (const u of state.urchins) {
     const nx = u.x + u.vx * dt;
     const hit = distance({ x: nx, y: u.y }, state.otter) < eatRadius;
 
     if (hit) {
-      state.eaten += 1;
+      eatenNow += 1;
       if (u.type === 'gold') state.giantTimer = 5;
-      if (u.type === 'white') triggerWhiteShockwave();
+      if (u.type === 'white') clearAll = true;
       continue;
     }
 
@@ -229,6 +231,13 @@ function update(dt) {
   }
 
   state.urchins = next;
+
+  if (clearAll) {
+    state.eaten += eatenNow;
+    triggerWhiteShockwave();
+  } else if (eatenNow > 0) {
+    state.eaten += eatenNow;
+  }
 
   if (state.kelpHp <= 0) {
     state.kelpHp = 0;
@@ -404,22 +413,54 @@ function drawShockwave() {
 }
 
 function drawHudOverlay() {
+  // score panels
   ctx.fillStyle = 'rgba(0,0,0,0.6)';
   ctx.fillRect(18, 16, 180, 60);
   ctx.fillRect(220, 16, 120, 60);
+
   ctx.fillStyle = '#fff';
   ctx.font = '16px sans-serif';
   ctx.fillText('食べたウニ', 30, 38);
   ctx.fillText('レベル', 236, 38);
+
   ctx.font = 'bold 28px sans-serif';
   ctx.fillText(String(state.eaten) + ' 匹', 30, 64);
   ctx.fillText(String(level()), 236, 64);
 
+  // kelp life gauge
+  const barX = 370;
+  const barY = 18;
+  const barW = 220;
+  const barH = 22;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(barX - 10, barY - 10, barW + 20, barH + 30);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = '14px sans-serif';
+  ctx.fillText('ケルプ', barX, barY - 2);
+
+  ctx.fillStyle = '#1f2937';
+  ctx.fillRect(barX, barY, barW, barH);
+
+  const hpRatio = state.kelpHp / MAX_HP;
+
+  ctx.fillStyle = hpRatio > 0.5 ? '#22c55e' : hpRatio > 0.25 ? '#f59e0b' : '#ef4444';
+  ctx.fillRect(barX, barY, barW * hpRatio, barH);
+
+  ctx.strokeStyle = '#000';
+  ctx.strokeRect(barX, barY, barW, barH);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = '14px sans-serif';
+  ctx.fillText(Math.floor(state.kelpHp) + ' / ' + MAX_HP, barX + barW / 2 - 28, barY + 16);
+
   if (state.giantTimer > 0) {
     ctx.fillStyle = '#fde68a';
     ctx.font = '20px sans-serif';
-    ctx.fillText('GIANT ' + state.giantTimer.toFixed(1), 380, 40);
+    ctx.fillText('GIANT ' + state.giantTimer.toFixed(1), 620, 40);
   }
+}
 }
 
 function drawGameOver() {
