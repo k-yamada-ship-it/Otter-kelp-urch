@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>ラッコのウニハンター</title>
   <style>
     :root {
@@ -48,6 +48,9 @@
       background: linear-gradient(#bfe8ff 0%, #5cc2e6 35%, #0f5f78 100%);
       border-radius: 18px;
       touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
       border: 1px solid rgba(255,255,255,0.12);
       box-shadow: 0 16px 40px rgba(0,0,0,0.28);
     }
@@ -62,6 +65,11 @@
     @media (max-width: 700px) {
       .status { grid-template-columns: repeat(2, 1fr); }
       h1 { font-size: 22px; }
+      .controls { padding: 10px; }
+      button { padding: 12px 14px; }
+      .value { font-size: 20px; }
+    }
+      h1 { font-size: 22px; }
     }
   </style>
 </head>
@@ -73,7 +81,7 @@
     <div class="controls">
       <button id="startBtn" type="button">スタート</button>
       <button id="resetBtn" type="button">リセット</button>
-      <div class="hint">iPad/PC対応：指やマウスでラッコ移動。ウニに当たると食べる。</div>
+      <div class="hint">iPhone/iPad/PC対応：指やマウスでラッコ移動。ウニに当たると食べる。</div>
     </div>
 
     <div class="status">
@@ -168,11 +176,11 @@ function spawnUrchin(type = null, x = W + 40) {
   });
 }
 
-function triggerWhiteShockwave() {
+function triggerWhiteShockwave(remainingUrchins) {
   state.shockwaveTimer = 0.35;
-  const removed = state.urchins.length;
+  const removed = remainingUrchins.length;
   state.eaten += removed;
-  state.urchins = [];
+  return [];
 }
 
 function update(dt) {
@@ -230,13 +238,14 @@ function update(dt) {
     next.push(u);
   }
 
-  state.urchins = next;
-
   if (clearAll) {
     state.eaten += eatenNow;
-    triggerWhiteShockwave();
-  } else if (eatenNow > 0) {
-    state.eaten += eatenNow;
+    state.urchins = triggerWhiteShockwave(next);
+  } else {
+    state.urchins = next;
+    if (eatenNow > 0) {
+      state.eaten += eatenNow;
+    }
   }
 
   if (state.kelpHp <= 0) {
@@ -524,8 +533,24 @@ function moveOtter(clientX, clientY) {
   state.otter.y = clamp(y, 110, H - 92);
 }
 
-canvas.addEventListener('pointermove', (e) => moveOtter(e.clientX, e.clientY));
-canvas.addEventListener('pointerdown', (e) => moveOtter(e.clientX, e.clientY));
+function handlePointer(e) {
+  e.preventDefault();
+  moveOtter(e.clientX, e.clientY);
+}
+
+canvas.addEventListener('pointermove', handlePointer, { passive: false });
+canvas.addEventListener('pointerdown', handlePointer, { passive: false });
+canvas.addEventListener('pointerenter', handlePointer, { passive: false });
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const t = e.touches[0];
+  if (t) moveOtter(t.clientX, t.clientY);
+}, { passive: false });
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  const t = e.touches[0];
+  if (t) moveOtter(t.clientX, t.clientY);
+}, { passive: false });
 
 startBtn.addEventListener('click', () => {
   if (state.gameOver) {
